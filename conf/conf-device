@@ -1,0 +1,15 @@
+#!/bin/bash
+INIT_SERIAL=true
+
+INIT_UVC=true
+FB_DEVICE="/dev/fb0"
+SET_FPS="15"
+SHOW_FPS=false
+STREAMING_MAXPACKET="2048"
+
+FB_WIDTH=$(cat /sys/class/graphics/fb0/virtual_size | cut -d, -f1)
+FB_HEIGHT=$(cat /sys/class/graphics/fb0/virtual_size | cut -d, -f2)
+
+UVC_FORMATS=(
+    "uncompressed:u:${SET_FPS}:${FB_WIDTH}:${FB_HEIGHT}"
+)

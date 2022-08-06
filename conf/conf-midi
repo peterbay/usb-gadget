@@ -1,0 +1,5 @@
+#!/bin/bash
+
+INIT_MIDI=true
+
+MIDI_ID=MIDI

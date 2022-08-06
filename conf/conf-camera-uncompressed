@@ -1,0 +1,21 @@
+#!/bin/bash
+
+INIT_UVC=true
+FPS="30"
+STREAMING_MAXPACKET="2048"
+
+UVC_FORMATS=(
+    "uncompressed:u:${FPS}:640:360"
+    "uncompressed:u:${FPS}:640:480"
+    "uncompressed:u:${FPS}:800:600"
+    "uncompressed:u:${FPS}:1024:768"
+    "uncompressed:u:${FPS}:1280:720"
+    "uncompressed:u:${FPS}:1280:960"
+    "uncompressed:u:${FPS}:1440:1080"
+    "uncompressed:u:${FPS}:1536:864"
+    "uncompressed:u:${FPS}:1600:900"
+    "uncompressed:u:${FPS}:1600:1200"
+    "uncompressed:u:${FPS}:1920:1080"
+)
+
+V4L2_DEVICE="/dev/video0"

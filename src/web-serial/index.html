@@ -1,0 +1,334 @@
+<html>
+
+<head>
+    <style>
+        body,
+        * {
+            margin: 0px;
+            padding: 0px;
+        }
+
+        body {
+            font-family: Verdana, sans-serif;
+            background-color: black;
+        }
+
+        .topnav {
+            position: relative;
+            background-color: #333;
+            overflow: hidden;
+        }
+
+        .topnav a {
+            float: left;
+            color: #f2f2f2;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+            font-size: 17px;
+        }
+
+        .topnav a:hover {
+            background-color: #ddd;
+            color: black;
+        }
+
+        .topnav a.active {
+            background-color: #0b8f11;
+            color: white;
+        }
+
+        .topnav a.error {
+            background-color: #8f0b0b;
+            color: white;
+        }
+
+        .topnav-centered a {
+            float: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        .topnav-right {
+            float: right;
+        }
+
+        @media screen and (max-width: 600px) {
+            .topnav a,
+            .topnav-right {
+                float: none;
+                display: block;
+            }
+
+            .topnav-centered a {
+                position: relative;
+                top: 0;
+                left: 0;
+                transform: none;
+            }
+        }
+
+        canvas {
+            margin-top: 10px;
+            padding-left: 0;
+            padding-right: 0;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+            width: 800px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="topnav">
+
+        <!-- Centered link -->
+        <div class="topnav-centered">
+            <a class="active">Browser Control</a>
+        </div>
+
+        <!-- Left-aligned links (default) -->
+        <a href="#video" id="request_video">Video</a>
+        <a href="#serial" id="request_serial">Serial</a>
+
+        <!-- Right-aligned links -->
+        <!-- <div class="topnav-right">
+            <a href="#search">Search</a>
+            <a href="#about">About</a>
+        </div> -->
+
+    </div>
+
+    <div>
+        <canvas id="content" width="800" height="600"></canvas>
+    </div>
+
+    <script>
+
+        window.requestAnimationFrame = window.requestAnimationFrame ||
+            window.webkitRequestAnimationFrame ||
+            window.mozRequestAnimationFrame ||
+            window.msRequestAnimationFrame ||
+            window.oRequestAnimationFrame;
+
+        class RemoteControl {
+            constructor(opt) {
+                this.contentId = opt.contentId || null;
+                this.videoButtonId = opt.videoButtonId || null;
+                this.serialButtonId = opt.serialButtonId || null;
+                this.serialFilters = opt.serialFilters || null;
+                this.serialBaudrate = opt.serialBaudrate || 9600;
+                this.errors = [];
+                this.mediaDevices = [];
+                this.mouseEventMapping = ['mousemove', 'mousedown', 'mouseup', 'contextmenu'];
+                this.keyboardEventMapping = ['keydown', 'keyup'];
+                this.serialWriter = null;
+                this.serialPort = null;
+                this.keyCodes = [
+                    'Backspace', 'Tab', 'Enter', 'ShiftLeft', 'ShiftRight',
+                    'ControlLeft', 'ControlRight', 'AltLeft', 'AltRight', 'Pause',
+                    'CapsLock', 'Escape', 'Space', 'PageUp', 'PageDown',
+                    'End', 'Home', 'ArrowLeft', 'ArrowUp', 'ArrowRight',
+                    'ArrowDown', 'PrintScreen', 'Insert', 'Delete', 'Digit0',
+                    'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5',
+                    'Digit6', 'Digit7', 'Digit8', 'Digit9', 'KeyA',
+                    'KeyB', 'KeyC', 'KeyD', 'KeyE', 'KeyF',
+                    'KeyG', 'KeyH', 'KeyI', 'KeyJ', 'KeyK',
+                    'KeyL', 'KeyM', 'KeyN', 'KeyO', 'KeyP',
+                    'KeyQ', 'KeyR', 'KeyS', 'KeyT', 'KeyU',
+                    'KeyV', 'KeyW', 'KeyX', 'KeyY', 'KeyZ',
+                    'MetaLeft', 'MetaRight', 'ContextMenu', 'Numpad0', 'Numpad1',
+                    'Numpad2', 'Numpad3', 'Numpad4', 'Numpad5', 'Numpad6',
+                    'Numpad7', 'Numpad8', 'Numpad9', 'F1', 'F2',
+                    'F3', 'F4', 'F5', 'F6', 'F7',
+                    'F8', 'F9', 'F10', 'F11', 'F12',
+                    'NumLock', 'ScrollLock', 'Semicolon', 'Equal', 'Comma',
+                    'Minus', 'Backslash', 'Slash', 'BracketLeft', 'BracketRight',
+                    'NumpadMultiply', 'NumpadAdd', 'NumpadSubtract', 'NumpadDecimal', 'NumpadDivide',
+                    'Period', 'Backquote', 'Quote'
+                ];
+                this.modifierNames = [
+                    'CapsLock', 'NumLock', 'ScrollLock'
+                ];
+            }
+
+            addError(context, err) {
+                this.errors.push({
+                    time: new Date(),
+                    context,
+                    err,
+                });
+            }
+
+            async init() {
+                this.initCanvas();
+                this.initSerial();
+                this.initVideo();
+                console.log(JSON.stringify(this.mediaDevices));
+                console.log(this.errors);
+                console.log(this.serialPort);
+            }
+
+            async sendEventPacket(...params) {
+                if (!this.serialWriter) return;
+                const data = new Uint8Array([0xff, params.length + 2].concat(params));
+                await this.serialWriter.write(data);
+            }
+
+            getModifiers(event) {
+                let modifierState = 0;
+                this.modifierNames.forEach((mn, index) => {
+                    modifierState += ((event.getModifierState(mn)) ? 1 : 0) << index;
+                })
+                return modifierState;
+            }
+
+            async wheelEvent(event) {
+                const dirY = (event.deltaY > 0) ? 1 : 0;
+                const deltaY = Math.abs(event.deltaY);
+
+                await this.sendEventPacket(0x57,
+                    dirY, (deltaY >> 7) & 0x7f, deltaY & 0x7f);
+            }
+
+            async mouseEvent(event) {
+                event.preventDefault();
+                const eventId = this.mouseEventMapping.indexOf(event.type);
+                if (eventId === -1) return;
+
+                const rect = this.canvas.getBoundingClientRect();
+                const x = Math.floor(event.clientX - rect.left);
+                const y = Math.floor(event.clientY - rect.top);
+                const modifierState = this.getModifiers(event);
+
+                await this.sendEventPacket(0x4D,
+                    eventId, event.button, modifierState,
+                    (x >> 7) & 0x7f, x & 0x7f,
+                    (y >> 7) & 0x7f, y & 0x7f);
+            }
+
+            async keyboardEvent(event) {
+                this.getModifiers(event);
+                event.preventDefault();
+                const eventId = this.keyboardEventMapping.indexOf(event.type);
+                if (eventId === -1) return;
+
+                let codeIndex = this.keyCodes.indexOf(event.code);
+                if (codeIndex === -1) return;
+                const modifierState = this.getModifiers(event);
+
+                await this.sendEventPacket(0x4B,
+                    eventId, codeIndex, modifierState);
+            }
+
+            initCanvas() {
+                this.canvas = document.getElementById(this.contentId);
+                if (!this.canvas) {
+                    return this.addError('initCanvas', new Error(`Missing DOM element with id: ${this.contentId}`));
+                }
+
+                this.context2d = this.canvas.getContext('2d');
+
+                this.canvas.addEventListener('wheel', this.wheelEvent.bind(this));
+
+                this.mouseEventMapping.forEach((eventName) =>
+                    this.canvas.addEventListener(eventName, this.mouseEvent.bind(this)));
+
+                this.keyboardEventMapping.forEach((eventName) =>
+                    document.addEventListener(eventName, this.keyboardEvent.bind(this)));
+            }
+
+            initVideo() {
+                const streamContainer = document.createElement('div');
+                this.video = document.createElement('video');
+
+                this.video.setAttribute('autoplay', '1')
+                this.video.setAttribute('width', this.context2d.canvas.width)
+                this.video.setAttribute('height', this.context2d.canvas.height)
+                this.video.setAttribute('style', 'display:none')
+
+                streamContainer.appendChild(this.video);
+                document.body.appendChild(streamContainer);
+
+                this.videoButton = document.getElementById(this.videoButtonId);
+                if (!this.videoButton) {
+                    return this.addError('initSerial', new Error(`Missing DOM element with id: ${this.contentId}`));
+                }
+
+                this.videoButton.addEventListener('click', async () => {
+                    if (navigator.mediaDevices) {
+                        navigator.mediaDevices.getUserMedia({ video: true })
+                            .then((stream) => {
+                                try {
+                                    this.video.srcObject = stream;
+                                } catch (error) {
+                                    this.video.src = URL.createObjectURL(stream);
+                                }
+
+                                this.videoButton.classList.add('active');
+
+                                var loop = () => {
+                                    this.context2d.drawImage(this.video, 0, 0);
+                                    requestAnimationFrame(loop)
+                                }
+                                requestAnimationFrame(loop)
+                            }, (err) => {
+                                this.videoButton.classList.add('error');
+                            });
+                    }
+                });
+
+            }
+
+            initSerial() {
+                if (!"serial" in navigator) {
+                    return this.addError('initSerial', new Error('Web Serial is not supported'));
+                }
+                this.serialButton = document.getElementById(this.serialButtonId);
+                if (!this.serialButton) {
+                    return this.addError('initSerial', new Error(`Missing DOM element with id: ${this.contentId}`));
+                }
+
+                this.serialButton.addEventListener('click', async () => {
+                    this.serialPort = await navigator.serial.requestPort(this.serialFilters);
+                    if (this.serialPort) {
+                        try {
+                            await this.serialPort.open({
+                                baudRate: this.serialBaudrate,
+                            });
+
+                            this.serialButton.classList.add('active');
+
+                            this.serialWriter = this.serialPort.writable.getWriter();
+
+                        } catch (err) {
+                            this.serialButton.classList.add('error');
+                        }
+                    }
+                });
+            }
+        }
+
+        (async function main() {
+            const opt = {
+                contentId: 'content',
+                videoButtonId: 'request_video',
+                serialButtonId: 'request_serial',
+                serialFilters: [
+                    { usbVendorId: 0x1d6b, usbProductId: 0x0104 }
+                ],
+                serialBaudrate: 115200,
+            }
+            const rc = new RemoteControl(opt);
+            rc.init();
+
+        })();
+
+    </script>
+</body>
+
+</html>

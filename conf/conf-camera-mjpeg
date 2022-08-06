@@ -1,0 +1,20 @@
+#!/bin/bash
+
+INIT_UVC=true
+FPS="30"
+
+UVC_FORMATS=(
+    "mjpeg:m:${FPS}:640:360"
+    "mjpeg:m:${FPS}:640:480"
+    "mjpeg:m:${FPS}:800:600"
+    "mjpeg:m:${FPS}:1024:768"
+    "mjpeg:m:${FPS}:1280:720"
+    "mjpeg:m:${FPS}:1280:960"
+    "mjpeg:m:${FPS}:1440:1080"
+    "mjpeg:m:${FPS}:1536:864"
+    "mjpeg:m:${FPS}:1600:900"
+    "mjpeg:m:${FPS}:1600:1200"
+    "mjpeg:m:${FPS}:1920:1080"
+)
+
+V4L2_DEVICE="/dev/video0"

@@ -1,0 +1,12 @@
+#!/bin/bash
+
+IMAGE_WIDTH=1920
+IMAGE_HEIGHT=1080
+IMAGE_PATH="image.jpg"
+SET_FPS="30"
+
+INIT_UVC=true
+
+UVC_FORMATS=(
+    "mjpeg:m:${FPS}:${IMAGE_WIDTH}:${IMAGE_HEIGHT}"
+)

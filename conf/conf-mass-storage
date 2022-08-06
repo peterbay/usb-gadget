@@ -1,0 +1,6 @@
+#!/bin/bash
+
+INIT_MASS_STORAGE=true
+
+# MASS_STORAGE_FILE_0=/home/pi/piusb.bin
+MASS_STORAGE_FILE_1=/home/pi/piusb.bin

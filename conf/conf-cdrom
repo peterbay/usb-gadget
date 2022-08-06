@@ -1,0 +1,6 @@
+#!/bin/bash
+
+INIT_CDROM=true
+
+ISO_FILE_0=/home/pi/output_image.iso
+# ISO_FILE_1=/home/pi/output_image.iso

@@ -1,0 +1,13 @@
+[Unit]
+Description=USB Gadget - %i
+Requires=sys-kernel-config.mount
+After=sys-kernel-config.mount
+DefaultDependencies=no
+
+[Service]
+Type=simple
+ExecStart=/home/pi/usb-gadget/gadget-run.sh conf-%i
+ExecStop=/home/pi/usb-gadget/gadget-cleanup.sh
+
+[Install]
+WantedBy=usb-gadget.target
